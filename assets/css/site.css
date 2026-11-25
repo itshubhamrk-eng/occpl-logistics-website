@@ -138,3 +138,4 @@ footer .base{border-top:1px solid #34385e;margin-top:40px;padding-top:20px;displ
 .rate-card table{width:100%;border-collapse:collapse;margin-top:8px;font-size:15px}.rate-card td{padding:6px 0;border-bottom:1px solid var(--border)}.rate-card td:last-child{text-align:right;white-space:nowrap}.rate-card .sum td{font-weight:700;border:0}
 @media (max-width:900px){.rate-row{grid-template-columns:1fr 1fr}.rate-row .btn{grid-column:1/-1}.rate-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){.rate-grid{grid-template-columns:minmax(0,1fr)}}
+.card[id],article[id]{scroll-margin-top:110px}
