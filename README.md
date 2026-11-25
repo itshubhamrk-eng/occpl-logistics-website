@@ -21,6 +21,10 @@ The browser calls `/api/v1/track/...` on the website's own domain; nginx forward
 (`nginx.conf.template`), so the backend needs no CORS change. To call the backend directly instead, set `apiBase` in
 `assets/js/config.js` and add the website's domain to the backend's allowed CORS origins.
 
+**Old shipments:** when the courier platform answers 404, the page asks the old website's system through
+`/api/old-track/{awb}` (nginx forwards it to `occplserver.azurewebsites.net/track-status`, 20 a minute per visitor) and shows the
+same fields as the old website, **including the consignee's address, phone and proof photo, without verification**.
+
 **Scan to track** opens the phone or laptop camera and reads the barcode / QR on the receipt or label. It uses the
 browser's built-in barcode reader; browsers without one (e.g. iPhone Safari) load a ZXing-based reader from
 cdn.jsdelivr.net the first time Scan is used. The camera needs HTTPS (or localhost).

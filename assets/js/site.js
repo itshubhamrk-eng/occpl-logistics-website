@@ -93,11 +93,12 @@
   var BADGE = { DELIVERED: 'p-green', RETURNED: 'p-amber', CANCELLED: 'p-red' };
   function fmtDate(d) { if (!d) return '—'; var x = new Date(d + (String(d).length === 10 ? 'T00:00:00' : '')); return isNaN(x) ? d : x.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
   function fmtTime(t) { if (!t) return ''; var x = new Date(t); return isNaN(x) ? '' : x.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); }
-  var TIMEOUT_MS = 15000; // covers the whole request, including reading the body
-  function api(path, opts) {
-    var ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, TIMEOUT_MS);
+  var TIMEOUT_MS = 15000, OLD_TIMEOUT_MS = 30000; // cover the whole request, including reading the body
+  function api(path, opts) { return request(API + path, opts, TIMEOUT_MS); }
+  function request(url, opts, ms) {
+    var ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, ms);
     function done() { clearTimeout(timer); }
-    var p = fetch(API + path, Object.assign({ headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, signal: ctl.signal }, opts || {}))
+    var p = fetch(url, Object.assign({ headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, signal: ctl.signal }, opts || {}))
       .then(function (r) {
         return r.json().catch(function (e) { if (ctl.signal.aborted) throw e; return {}; })
           .then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
@@ -113,8 +114,9 @@
     app.innerHTML = '<div class="skel" aria-label="Loading"></div>';
     api('/track/' + encodeURIComponent(n)).then(function (r) {
       if (current !== n) return;
+      if (r.status === 404) return trackOld(n);
       if (!r.ok) {
-        app.innerHTML = '<div class="err" role="alert">' + esc(r.status === 404 ? 'No shipment found for ' + n + '. Check the AWB / docket number on your receipt.' : (r.body && r.body.message) || 'Tracking is not available right now. Please try again in a moment.') + '</div>';
+        app.innerHTML = '<div class="err" role="alert">' + esc((r.body && r.body.message) || 'Tracking is not available right now. Please try again in a moment.') + '</div>';
         return;
       }
       render(r.body.data || r.body);
@@ -123,6 +125,40 @@
       app.innerHTML = '<div class="err" role="alert">' + (slow(e) ? 'Tracking is taking too long to respond.' : 'Could not reach the tracking service. Check your connection and try again.') + '</div><p><button class="btn btn--red" type="button" id="retry">Try again</button></p>';
       $('#retry').addEventListener('click', function () { track(n); });
     });
+  }
+  // Shipments booked in the old system (what the old website tracked): asked only when the courier platform has no such number.
+  function trackOld(n) {
+    var none = '<div class="err" role="alert">' + esc('No shipment found for ' + n + '. Check the AWB / docket number on your receipt.') + '</div>';
+    if (!/^[A-Z0-9_-]{4,30}$/.test(n)) { app.innerHTML = none; return; }
+    return request('/api/old-track/' + n, {}, OLD_TIMEOUT_MS).then(function (r) {
+      if (current !== n) return;
+      if (r.status === 404) { app.innerHTML = none; return; }
+      if (!r.ok || !r.body || (!r.body.internal_status && !r.body.shipway_status)) {
+        app.innerHTML = '<div class="err" role="alert">' + (r.status === 429 ? 'Too many searches. Please wait a minute and try again.' : 'Tracking is not available right now. Please try again in a moment.') + '</div>';
+        return;
+      }
+      renderOld(r.body, n);
+    });
+  }
+  function renderOld(d, n) {
+    var o = d.internal_status, s = d.shipway_status, photo = '', carrier = '<p class="hint">No shipment data available.</p>';
+    function rows(list) { return '<div class="kv">' + list.map(function (x) { return '<div><small>' + x[0] + '</small><span>' + (x[1] ? esc(x[1]) : 'N/A') + '</span></div>'; }).join('') + '</div>'; }
+    var order = o ? rows([['Awb No', o.awb_no], ['Consignor', o.consignor], ['Consignee', o.consignee], ['Consignee Address', o.consignee_address],
+      ['Consignee City', o.consignee_city], ['Consignee Contact', o.consignee_contact], ['Forwarding Associate', o.forwarding_associate],
+      ['Forwarding No', o.forwarding_no], ['Action', o.action], ['Booking Date', o.booking_date], ['Status Date', o.status_date],
+      ['Proof', o.proof], ['Remarks', o.remarks]]) : '<p class="hint">No data available.</p>';
+    if (o && /^[A-Za-z0-9+/=\s]+$/.test(o.photo_base64 || '')) photo = '<h3 style="font-size:16px;margin-top:16px">Proof of delivery</h3><img src="data:image/jpeg;base64,' + o.photo_base64.replace(/\s+/g, '') + '" alt="Proof of delivery" style="margin-top:10px;border-radius:12px">';
+    if (s && !s.error) {
+      var x = s.extra_fields || {}, list = [['AWB No', s.awbno], ['Order ID', s.order_id], ['Carrier', s.carrier], ['Pickup Date', s.pickup_date], ['Current Status', s.current_status]];
+      if (s.extra_fields) list.push(['Recipient', x.reciever], ['Last Center Name', x.lastCenterName], ['Last Center Phone', x.lastCenterph], ['Expected Delivery Date', x.expected_delivery_date]);
+      carrier = rows(list) + (/^https?:\/\//i.test(s.tracking_url || '') ? '<p style="margin:14px 0 0"><a class="btn btn--soft" href="' + esc(s.tracking_url) + '" target="_blank" rel="noopener noreferrer">Track with the carrier</a></p>' : '');
+      if (Array.isArray(s.scan) && s.scan.length) carrier += '<h3 style="font-size:16px;margin-top:20px">Scan events</h3>' + rows(s.scan.map(function (e) { return [esc(fmtTime(e.time) || e.time), (e.status_detail || '') + (e.location ? ' at ' + e.location : '')]; }));
+    }
+    app.innerHTML = '<div class="tgrid old"><div class="panel"><div class="awb"><small>AWB number</small><div>' + esc((o && o.awb_no) || n) + '</div></div>' +
+      (o && o.action ? '<p style="margin:12px 0 0"><span class="pill p-info" style="white-space:normal;overflow-wrap:anywhere">' + esc(o.action) + '</span></p>' : '') +
+      '<h2 style="font-size:18px;margin-top:22px">Order details</h2>' + order + photo + '</div>' +
+      '<div style="display:grid;gap:24px"><div class="panel"><h2 style="font-size:18px">Shipment details</h2>' + carrier + '</div>' +
+      '<div class="panel help"><h2 style="font-size:18px">Need help?</h2><a href="tel:+919370721219">Call customer care <span style="color:var(--primary-strong)">93707 21219</span></a><a href="mailto:info@occpllogistics.com">Email us <span>info@occpllogistics.com</span></a></div></div></div>';
   }
   function render(t) {
     var status = t.status, idx = -1;
