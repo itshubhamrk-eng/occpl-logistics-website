@@ -16,6 +16,13 @@
     menu.textContent = open ? '✕' : '☰';
   });
 
+  // ---- WhatsApp: phones open the app from the wa.me link; computers go straight to WhatsApp Web
+  var onPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  $$('a[href^="https://wa.me/"]').forEach(function (a) {
+    if (onPhone) { a.removeAttribute('target'); return; }
+    a.href = a.href.replace(/^https:\/\/wa\.me\/(\d+)\?/, 'https://web.whatsapp.com/send?phone=$1&');
+  });
+
   // ---- any "track" form: go to the Track page with the number
   $$('form[data-track-form]').forEach(function (f) {
     f.addEventListener('submit', function (e) {

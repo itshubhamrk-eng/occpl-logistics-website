@@ -139,3 +139,6 @@ footer .base{border-top:1px solid #34385e;margin-top:40px;padding-top:20px;displ
 @media (max-width:900px){.rate-row{grid-template-columns:1fr 1fr}.rate-row .btn{grid-column:1/-1}.rate-grid{grid-template-columns:1fr 1fr}}
 @media (max-width:560px){.rate-grid{grid-template-columns:minmax(0,1fr)}}
 .card[id],article[id]{scroll-margin-top:110px}
+.wa{position:fixed;right:calc(18px + env(safe-area-inset-right));bottom:calc(18px + env(safe-area-inset-bottom));z-index:15;width:60px;height:60px;border-radius:50%;filter:drop-shadow(0 3px 8px rgb(15 16 32/45%))}.wa svg{display:block}.wa:hover svg{transform:scale(1.06)}
+footer{padding-bottom:92px}
+@media print{.wa{display:none}}
