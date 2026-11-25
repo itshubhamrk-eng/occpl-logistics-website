@@ -228,6 +228,50 @@
     if (q) { q = clean(q); $$('form[data-track-form] input').forEach(function (i) { i.value = q; }); track(q); }
   }
 
+  // ---- rate calculator: the courier platform's zone tariff (public rates API)
+  var rc = $('#rate-calc');
+  if (rc) {
+    var rout = $('#rate-out'), rbtn = rc.querySelector('button'), rseq = 0;
+    var inr = function (v) { return '₹' + Number(v).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+    var PKG = { DOC: 'Document', NONDOC: 'Parcel', NON_DOC: 'Parcel' };
+    var rerr = function (m) { rout.innerHTML = '<div class="err" role="alert" style="margin-top:18px">' + esc(m) + '</div>'; };
+    rc.addEventListener('input', function () { rseq++; rout.innerHTML = ''; rbtn.disabled = false; rbtn.textContent = 'Check rates'; });
+    rc.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var f = rc.elements, pin = /^[1-9][0-9]{5}$/, num = function (n) { return f[n].value === '' ? null : +f[n].value; };
+      var bad = function (n, m) { rerr(m); f[n].focus(); };
+      f.from.value = clean(f.from.value); f.to.value = clean(f.to.value);
+      if (!pin.test(f.from.value)) return bad('from', 'Enter a 6-digit from pincode.');
+      if (!pin.test(f.to.value)) return bad('to', 'Enter a 6-digit to pincode.');
+      if (!(num('kg') > 0) || !f.kg.checkValidity()) return bad('kg', 'Enter the weight in kg, above 0, with up to 3 decimals.');
+      if (num('value') === null || !f.value.checkValidity()) return bad('value', 'Enter the value of the goods in rupees.');
+      var more = ['pieces', 'l', 'w', 'h'].filter(function (n) { return !f[n].checkValidity(); })[0];
+      if (!more && ['l', 'w', 'h'].some(function (n) { return f[n].value; })) more = ['l', 'w', 'h'].filter(function (n) { return !f[n].value; })[0];
+      if (more) { rc.querySelector('details').open = true; return bad(more, 'Check the boxes and enter all three dimensions, or leave all three empty.'); }
+      var my = ++rseq;
+      rbtn.disabled = true; rbtn.textContent = 'Checking…';
+      rout.innerHTML = '<div class="skel" style="margin-top:18px" aria-label="Loading"></div>';
+      api('/public/rates', { method: 'POST', body: JSON.stringify({ originPincode: f.from.value, destinationPincode: f.to.value, actualWeightKg: num('kg'), declaredValue: num('value'),
+        pieces: num('pieces') || 1, lengthCm: num('l'), widthCm: num('w'), heightCm: num('h'), cod: f.cod.checked }) }).then(function (r) {
+        if (my !== rseq) return;
+        var d = r.body && (r.body.data || r.body);
+        if (!r.ok || !d || !Array.isArray(d.rates)) {
+          rerr(r.status === 429 ? 'Too many rate checks. Please wait a minute and try again.' : r.status === 422 && r.body && r.body.message ? r.body.message : 'Rates are not available right now. Please try again, or call 93703 21219.');
+          return;
+        }
+        rout.innerHTML = '<div class="rate-grid">' + d.rates.map(function (o, i) {
+          var row = function (a, b) { return '<tr><td>' + esc(a) + '</td><td>' + inr(b) + '</td></tr>'; };
+          return '<article class="rate-card"><div class="rate-top"><h3>' + esc(o.service) + '</h3>' + (i === 0 ? '<span class="pill p-green">Lowest</span>' : '') + '</div>' +
+            '<p>' + esc(PKG[o.packageType] || o.packageType) + (o.deliveryDays == null ? '' : ' · about ' + (o.deliveryDays === 0 ? 'same day' : esc(o.deliveryDays) + (o.deliveryDays === 1 ? ' day' : ' days'))) + (o.remoteArea ? ' · remote area' : '') + '</p>' +
+            '<strong>' + inr(o.total) + '</strong><small>' + esc(o.chargeableWeightKg) + ' kg chargeable · including GST</small>' +
+            '<details><summary>View breakup</summary><table>' + row('Freight', o.freight) + o.charges.map(function (c) { return row(c.name, c.amount); }).join('') +
+            o.taxes.map(function (t) { return row(t.code + ' ' + t.percent + '%', t.amount); }).join('') + (+o.roundOff ? row('Round off', o.roundOff) : '') + '<tr class="sum"><td>Total</td><td>' + inr(o.total) + '</td></tr></table></details></article>';
+        }).join('') + '</div><p class="hint">Estimated rates for today. The weight, size and service at booking decide the final charge and delivery date.</p>';
+      }).catch(function (e) { if (my === rseq) rerr(slow(e) ? 'This is taking too long. Please try again.' : 'Could not reach the rate service. Check your connection and try again.'); })
+        .then(function () { if (my === rseq) { rbtn.disabled = false; rbtn.textContent = 'Check rates'; } });
+    });
+  }
+
   // ---- volumetric weight calculator (cm, divisor 5000 for courier / 4000 for cargo)
   var vol = $('#vol-calc');
   if (vol) {

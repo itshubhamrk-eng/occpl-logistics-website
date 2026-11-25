@@ -3,6 +3,7 @@
 # e.g. COURIER_API=https://courier.dev.occplsoftech.com
 # Old-system lookups per visitor. The visitor's address comes from the proxy in front (Docker network only).
 limit_req_zone $binary_remote_addr zone=oldtrack:1m rate=20r/m;
+limit_req_zone $binary_remote_addr zone=rates:1m rate=20r/m;
 
 server {
     listen 80;
@@ -30,6 +31,20 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_hide_header Set-Cookie;
         client_max_body_size 16k;
+    }
+
+    # Public rate calculator (POST only).
+    location = /api/v1/public/rates {
+        limit_except POST { deny all; }
+        limit_req zone=rates burst=10 nodelay;
+        limit_req_status 429;
+        proxy_pass ${COURIER_API}/api/v1/public/rates;
+        proxy_ssl_server_name on;
+        proxy_set_header Host ${COURIER_API_HOST};
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_hide_header Set-Cookie;
+        client_max_body_size 4k;
     }
 
     # Shipments of the old system (GET, one AWB). Its address is resolved per request, so the site starts without it.
