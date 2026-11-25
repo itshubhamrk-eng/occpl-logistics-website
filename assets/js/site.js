@@ -93,22 +93,36 @@
   var BADGE = { DELIVERED: 'p-green', RETURNED: 'p-amber', CANCELLED: 'p-red' };
   function fmtDate(d) { if (!d) return '—'; var x = new Date(d + (String(d).length === 10 ? 'T00:00:00' : '')); return isNaN(x) ? d : x.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
   function fmtTime(t) { if (!t) return ''; var x = new Date(t); return isNaN(x) ? '' : x.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }); }
+  var TIMEOUT_MS = 15000; // covers the whole request, including reading the body
   function api(path, opts) {
-    return fetch(API + path, Object.assign({ headers: { Accept: 'application/json', 'Content-Type': 'application/json' } }, opts || {}))
-      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); });
+    var ctl = new AbortController(), timer = setTimeout(function () { ctl.abort(); }, TIMEOUT_MS);
+    function done() { clearTimeout(timer); }
+    var p = fetch(API + path, Object.assign({ headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, signal: ctl.signal }, opts || {}))
+      .then(function (r) {
+        return r.json().catch(function (e) { if (ctl.signal.aborted) throw e; return {}; })
+          .then(function (j) { return { ok: r.ok, status: r.status, body: j }; });
+      });
+    p.then(done, done);
+    return p;
   }
+  function slow(e) { return !!e && e.name === 'AbortError'; }
   var app = $('#track-app'), current = null;
   function track(n) {
     if (!app) return;
     current = n;
     app.innerHTML = '<div class="skel" aria-label="Loading"></div>';
     api('/track/' + encodeURIComponent(n)).then(function (r) {
+      if (current !== n) return;
       if (!r.ok) {
         app.innerHTML = '<div class="err" role="alert">' + esc(r.status === 404 ? 'No shipment found for ' + n + '. Check the AWB / docket number on your receipt.' : (r.body && r.body.message) || 'Tracking is not available right now. Please try again in a moment.') + '</div>';
         return;
       }
       render(r.body.data || r.body);
-    }).catch(function () { app.innerHTML = '<div class="err" role="alert">Could not reach the tracking service. Check your connection and try again.</div>'; });
+    }).catch(function (e) {
+      if (current !== n) return;
+      app.innerHTML = '<div class="err" role="alert">' + (slow(e) ? 'Tracking is taking too long to respond.' : 'Could not reach the tracking service. Check your connection and try again.') + '</div><p><button class="btn btn--red" type="button" id="retry">Try again</button></p>';
+      $('#retry').addEventListener('click', function () { track(n); });
+    });
   }
   function render(t) {
     var status = t.status, idx = -1;
@@ -151,7 +165,7 @@
           (pod.photoUrl ? '<a href="' + esc(pod.photoUrl) + '" target="_blank" rel="noopener"><img src="' + esc(pod.photoUrl) + '" alt="Delivery photo"></a>' : '') +
           (pod.signatureUrl ? '<a href="' + esc(pod.signatureUrl) + '" target="_blank" rel="noopener"><img src="' + esc(pod.signatureUrl) + '" alt="Receiver signature"></a>' : '') + '</div>' : '') +
         ((x.tickets || []).length ? '<h3 style="font-size:16px;margin-top:16px">Your complaints</h3>' + x.tickets.map(function (k) { return '<p class="hint"><b>' + esc(k.ticketNumber) + '</b> · ' + esc(k.subject) + ' · <span class="pill p-grey">' + esc(k.status) + '</span></p>'; }).join('') : '');
-    });
+    }).catch(function (e) { d.innerHTML = '<div class="err" role="alert">' + (slow(e) ? 'This is taking too long.' : 'Could not reach the tracking service.') + ' Please try Verify again.</div>'; });
   }
   function complaintForm() {
     var d = $('#detail');
@@ -160,11 +174,16 @@
     d.appendChild(box);
     box.addEventListener('submit', function (e) {
       e.preventDefault();
-      var out = box.querySelector('.out');
+      var out = box.querySelector('.out'), btn = box.querySelector('button');
+      btn.disabled = true;
+      out.innerHTML = '<p class="hint">Sending…</p>';
       api('/track/' + encodeURIComponent(current) + '/tickets', { method: 'POST', body: JSON.stringify({ phoneLast4: last4, subject: box.subject.value.trim(), message: box.message.value.trim() }) }).then(function (r) {
         var k = r.body && (r.body.data || r.body);
         out.innerHTML = r.ok ? '<p class="pill p-green">✓ Complaint registered' + (k && k.ticketNumber ? ': ' + esc(k.ticketNumber) : '') + '. Our customer care will contact you within 3 working days.</p>' : '<div class="err">' + esc((r.body && r.body.message) || 'Could not send. Please call 93707 21219.') + '</div>';
-        if (r.ok) box.querySelector('button').disabled = true;
+        btn.disabled = r.ok;
+      }).catch(function () {
+        btn.disabled = false;
+        out.innerHTML = '<div class="err" role="alert">We could not confirm your complaint was received. To avoid sending it twice, press Verify again to see your complaints, or call 93707 21219.</div>';
       });
     });
   }
