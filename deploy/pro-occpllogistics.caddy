@@ -1,0 +1,5 @@
+# OCCPL Logistics website (Compose project occpl-website).
+pro.occpllogistics.com {
+	encode zstd gzip
+	reverse_proxy occpl-website:80
+}

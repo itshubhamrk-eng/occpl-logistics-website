@@ -2,7 +2,7 @@
 FROM node:20-alpine AS build
 WORKDIR /site
 COPY . .
-ARG SITE_URL=https://www.occpllogistics.com
+ARG SITE_URL=https://pro.occpllogistics.com
 RUN SITE_URL=$SITE_URL node build.mjs
 
 FROM nginx:1.27-alpine

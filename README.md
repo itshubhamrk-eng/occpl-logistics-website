@@ -1,6 +1,6 @@
 # OCCPL Logistics website
 
-The public website of **OCCPL Logistics Pvt. Ltd.** (www.occpllogistics.com), redesigned in the same look as the
+The public website of **OCCPL Logistics Pvt. Ltd.** (pro.occpllogistics.com), redesigned in the same look as the
 OCCPL staff app (crimson gradient, indigo accent, Outfit font), with **live tracking** from the OCCPL courier platform.
 
 ## Pages
@@ -38,11 +38,20 @@ No dependencies. Edit pages in `src/pages/` (the first line is the page's title 
 
 ## Deploy
 ```bash
-docker build -t occpl-website --build-arg SITE_URL=https://www.occpllogistics.com .
+docker build -t occpl-website --build-arg SITE_URL=https://pro.occpllogistics.com .
 docker run -p 80:80 -e COURIER_API=https://<courier backend> -e COURIER_API_HOST=<courier backend host> occpl-website
 ```
 Old WordPress addresses (`/about-us/`, `/contact-us/`, `/track-your-order/`, `/branch-locator/`, …) redirect to the
 new pages.
+
+### Dev server (pro.occpllogistics.com)
+`deploy/docker-compose.yml` runs this site as its own Compose project (`occpl-website`) beside the courier platform and
+publishes no ports. `deploy/pro-occpllogistics.caddy` is the platform Caddy's site block; add it only once the DNS A
+record points at the server, and run `caddy validate` before reloading.
+
+## SEO
+The build adds canonical links, social tags, robots rules, the sitemap and JSON-LD (breadcrumbs, FAQ, services).
+Change the domain with `SITE_URL`. 404 is `noindex`.
 
 ## Credits
 India map outline: [svg-maps](https://github.com/VictorCazanave/svg-maps) by Victor Cazanave, CC BY 4.0.
