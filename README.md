@@ -6,7 +6,7 @@ OCCPL staff app (crimson gradient, indigo accent, Outfit font), with **live trac
 ## Pages
 Home · About · Services · Track (with **Scan to track**) · Branches · Customer Tools (volumetric weight, conversion
 factors, rate enquiry) · Pickup Request · Business Opportunities · Careers · Contact · FAQ · Prohibited Items ·
-Terms & Conditions · Privacy Policy · 404. Content comes from the old WordPress site.
+Terms & Conditions · Privacy Policy · Pricing · Cancellation & Refund Policy · Shipping & Delivery Policy · 404. Content comes from the old WordPress site.
 
 ## How tracking works
 The Track page calls the courier platform's **public** endpoints (no login, no keys):
