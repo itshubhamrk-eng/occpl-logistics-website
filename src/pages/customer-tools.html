@@ -1,13 +1,27 @@
-<!--{"title":"Volumetric Weight Calculator &amp; Rate Enquiry | OCCPL","description":"Calculate volumetric and chargeable weight for courier and cargo, convert kg, lb, cm and inches, and request a shipping rate from OCCPL Logistics.","nav":"/customer-tools/"}-->
-<section class="phead"><div class="wrap"><div class="eyebrow" style="color:#ffd6df">Customer tools</div><h1 style="margin-top:10px">Your delivery estimators</h1><p>Work out the chargeable weight, convert units, and ask us for a rate before you ship.</p></div></section>
-<section class="s" style="padding-top:56px"><div class="wrap g2" style="align-items:start">
+<!--{"title":"Courier Rate &amp; Volumetric Weight Calculator | OCCPL","description":"Check OCCPL courier rates by pincode, weight and value, with GST breakup. Calculate volumetric weight and convert kg, lb, cm and inches.","nav":"/customer-tools/"}-->
+<section class="phead"><div class="wrap"><div class="eyebrow" style="color:#ffd6df">Customer tools</div><h1 style="margin-top:10px">Your delivery estimators</h1><p>Check our rates, work out the chargeable weight and convert units before you ship.</p></div></section>
+<section class="s" style="padding:56px 0 0"><div class="wrap"><div id="rate" class="card calc rates"><h2 style="font-size:24px">Rate calculator</h2><p style="color:var(--muted)">Enter the route and package to see our rates, cheapest first, with charges and GST.</p>
+<form id="rate-calc" class="form" novalidate><div class="rate-row">
+<label>From pincode<input class="input" name="from" inputmode="numeric" maxlength="6" placeholder="e.g. 411009" autocomplete="off" required></label>
+<label>To pincode<input class="input" name="to" inputmode="numeric" maxlength="6" placeholder="e.g. 400001" autocomplete="off" required></label>
+<label>Total weight (kg)<input class="input" name="kg" type="number" inputmode="decimal" min="0.001" max="99999" step="0.001" required></label>
+<label>Value (₹)<input class="input" name="value" type="number" inputmode="decimal" min="0" max="100000000" step="0.01" required></label>
+<button class="btn btn--red" type="submit">Check rates</button></div>
+<details class="rate-more"><summary>More options (boxes, dimensions, cash on delivery)</summary><div class="rate-row">
+<label>Boxes<input class="input" name="pieces" type="number" inputmode="numeric" min="1" max="999" step="1" value="1"></label>
+<label>Length (cm)<input class="input" name="l" type="number" inputmode="decimal" min="0.1" max="9999" step="0.1"></label>
+<label>Width (cm)<input class="input" name="w" type="number" inputmode="decimal" min="0.1" max="9999" step="0.1"></label>
+<label>Height (cm)<input class="input" name="h" type="number" inputmode="decimal" min="0.1" max="9999" step="0.1"></label>
+<label class="check"><input name="cod" type="checkbox"> Cash on delivery</label></div><p class="hint">Dimensions are per box.</p></details></form>
+<div id="rate-out" aria-live="polite"></div></div></div></section>
+<section class="s" style="padding-top:24px"><div class="wrap g2" style="align-items:start">
 <div id="volumetric" class="card calc"><h2 style="font-size:24px">Volumetric weight calculator</h2><p style="color:var(--muted)">Courier and cargo are charged on the higher of actual weight and volumetric weight.</p>
 <form id="vol-calc" class="form" onsubmit="return false"><div class="two"><label>Length (cm)<input class="input" name="l" type="number" min="0" value="30"></label><label>Width (cm)<input class="input" name="w" type="number" min="0" value="20"></label></div>
 <div class="two"><label>Height (cm)<input class="input" name="h" type="number" min="0" value="15"></label><label>Number of boxes<input class="input" name="n" type="number" min="1" value="1"></label></div>
 <div class="two"><label>Actual weight (kg)<input class="input" name="a" type="number" min="0" step="0.1" value="2"></label><label>Mode<select class="input" name="div"><option value="5000">Courier (L×W×H ÷ 5000)</option><option value="4000">Cargo (L×W×H ÷ 4000)</option></select></label></div></form>
 <div class="res" id="vol-out"></div><p class="hint">An estimate. The weight at booking decides the final charge.</p></div>
 <div style="display:grid;gap:24px">
-<div id="rate" class="card calc"><h2 style="font-size:24px">Rate enquiry</h2><p style="color:var(--muted)">Send us the pincodes and weight and our team will reply with the rate. Or call <a href="tel:+919370321219">93703 21219</a>.</p>
+<div id="rate-enquiry" class="card calc"><h2 style="font-size:24px">Rate enquiry</h2><p style="color:var(--muted)">International, or no rate shown above? Send us the details and our team will reply with the rate. Or call <a href="tel:+919370321219">93703 21219</a>.</p>
 <form class="form" data-mail="Rate enquiry"><div class="two"><label>From pincode<input class="input" name="from" data-label="From pincode" inputmode="numeric" maxlength="6" required></label><label>To pincode<input class="input" name="to" data-label="To pincode" inputmode="numeric" maxlength="6" required></label></div>
 <div class="two"><label>Weight (kg)<input class="input" name="kg" data-label="Weight (kg)" type="number" min="0" step="0.1" required></label><label>Type<select class="input" name="type" data-label="Type"><option>Courier – Document</option><option>Courier – Non Document</option><option>Cargo</option><option>International</option></select></label></div>
 <label>Your phone<input class="input" name="phone" data-label="Phone" inputmode="tel" required></label><button class="btn btn--red" type="submit">Ask for the rate</button><p class="hint">Opens your email app with these details addressed to info@occpllogistics.com.</p></form></div>

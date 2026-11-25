@@ -21,6 +21,9 @@ The browser calls `/api/v1/track/...` on the website's own domain; nginx forward
 (`nginx.conf.template`), so the backend needs no CORS change. To call the backend directly instead, set `apiBase` in
 `assets/js/config.js` and add the website's domain to the backend's allowed CORS origins.
 
+**Rate calculator** (Customer Tools): `POST /api/v1/public/rates` `{ originPincode, destinationPincode, actualWeightKg, declaredValue }`
+(optional `pieces`, `lengthCm`, `widthCm`, `heightCm`, `cod`) answers the zone tariff's options; 20 a minute per visitor.
+
 **Old shipments:** when the courier platform answers 404, the page asks the old website's system through
 `/api/old-track/{awb}` (nginx forwards it to `occplserver.azurewebsites.net/track-status`, 20 a minute per visitor) and shows the
 same fields as the old website, **including the consignee's address, phone and proof photo, without verification**.

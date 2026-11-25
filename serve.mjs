@@ -11,7 +11,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 
 
 createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
-  if (url.pathname.startsWith('/api/v1/track/')) {
+  if (url.pathname.startsWith('/api/v1/track/') || url.pathname === '/api/v1/public/rates') {
     const body = req.method === 'POST' ? await new Promise((r) => { let d = ''; req.on('data', (c) => (d += c)); req.on('end', () => r(d)); }) : undefined;
     try {
       const up = await fetch(API + url.pathname + url.search, { method: req.method, body, headers: { 'Content-Type': 'application/json', Accept: 'application/json' } });
