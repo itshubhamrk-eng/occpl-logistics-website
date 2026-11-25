@@ -129,3 +129,5 @@ footer .base{border-top:1px solid #34385e;margin-top:40px;padding-top:20px;displ
 .tgrid>*{min-width:0}
 @media (max-width:560px){.panel{padding:20px}.st-top{flex-wrap:wrap}.awb div{font-size:24px}.tl>div{grid-template-columns:28px 1fr}.tl time{grid-column:2;margin-top:-14px;padding-bottom:4px}.kv div{grid-template-columns:1fr}}
 .tgrid>div{grid-template-columns:minmax(0,1fr)}.help a{flex-wrap:wrap;gap:4px 12px}
+.svc-row{padding:34px;display:grid;grid-template-columns:80px minmax(0,1fr) auto;gap:24px;align-items:center}
+@media (max-width:900px){.svc-row{grid-template-columns:minmax(0,1fr);padding:24px;gap:18px}.svc-row .btn{justify-self:start}}
