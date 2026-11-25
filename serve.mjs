@@ -20,6 +20,15 @@ createServer(async (req, res) => {
     } catch { res.writeHead(502); res.end('{"message":"Tracking backend unreachable"}'); }
     return;
   }
+  const old = url.pathname.match(/^\/api\/old-track\/([A-Za-z0-9_-]{4,30})$/);
+  if (old) {
+    try {
+      const up = await fetch(`https://occplserver.azurewebsites.net/track-status?awb_no=${old[1]}`);
+      res.writeHead(up.status, { 'Content-Type': 'application/json' });
+      res.end(Buffer.from(await up.arrayBuffer()));
+    } catch { res.writeHead(502); res.end('{}'); }
+    return;
+  }
   let p = normalize(join('dist', decodeURIComponent(url.pathname)));
   if (!p.startsWith('dist')) { res.writeHead(400); return res.end(); }
   try { if ((await stat(p)).isDirectory()) p = join(p, 'index.html'); } catch { p = join('dist', '404.html'); res.statusCode = 404; }
