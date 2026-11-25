@@ -49,6 +49,12 @@ new pages.
 publishes no ports. `deploy/pro-occpllogistics.caddy` is the platform Caddy's site block; add it only once the DNS A
 record points at the server, and run `caddy validate` before reloading.
 
+**Auto deploy:** cron on the server runs `deploy/auto-deploy.sh` every 2 minutes. When main changes it builds the image,
+smoke-tests a candidate, switches, checks the public site and rolls back on failure. No keys or GitHub secrets.
+The installed copies of the script and Compose file are in `~/occpl-website-auto/` and are **not** updated by merges:
+copy them by hand after changing them here. There: `deployed` and `failed` hold commit SHAs (delete `failed` to retry) and `deploy.log`
+is the log. To stop auto deploy, remove its line from `crontab -e`.
+
 ## SEO
 The build adds canonical links, social tags, robots rules, the sitemap and JSON-LD (breadcrumbs, FAQ, services).
 Change the domain with `SITE_URL`. 404 is `noindex`.
