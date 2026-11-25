@@ -34,7 +34,8 @@ server {
     location = /track-your-order/ { return 301 /track/; }
     location = /job-openings/ { return 301 /careers/; }
     location = /branch-locator/ { return 301 /branches/; }
-    location ~ ^/services/.+ { return 301 /services/; }
+    # index.html is excluded: nginx resolves /services/ to it internally, and redirecting it would loop.
+    location ~ ^/services/(?!index\.html$).+ { return 301 /services/; }
     location ~ ^/(rate-calculator|pincode-locator|volumetric-weight-calculator|conversion-factors|world-clock|support)/?$ { return 301 /customer-tools/; }
     location ~ ^/(gallery|news-events|blogs)(/.*)?$ { return 301 /; }
 
