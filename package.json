@@ -1,0 +1,10 @@
+{
+  "name": "occpl-logistics-website",
+  "private": true,
+  "description": "OCCPL Logistics public website (static), with live tracking from the OCCPL courier platform.",
+  "scripts": {
+    "build": "node build.mjs",
+    "serve": "node serve.mjs"
+  },
+  "engines": { "node": ">=18" }
+}

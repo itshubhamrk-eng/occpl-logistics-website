@@ -1,0 +1,43 @@
+# OCCPL Logistics website. Static files, plus /api/v1/track/ forwarded to the courier backend so the browser
+# calls the same domain (no CORS change needed). COURIER_API is set when the container starts,
+# e.g. COURIER_API=https://courier.dev.occplsoftech.com
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+    absolute_redirect off;
+
+    gzip on;
+    gzip_types text/css application/javascript image/svg+xml application/json;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+    add_header Permissions-Policy "camera=(self), microphone=(), geolocation=()" always;
+
+    # Public tracking only: GET /track/{number}, POST /track/{number}/verify and /tickets. Nothing else is forwarded.
+    location /api/v1/track/ {
+        proxy_pass ${COURIER_API}/api/v1/track/;
+        proxy_ssl_server_name on;
+        proxy_set_header Host ${COURIER_API_HOST};
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_hide_header Set-Cookie;
+        client_max_body_size 16k;
+    }
+
+    location /assets/ { expires 30d; add_header Cache-Control "public"; }
+
+    # Old WordPress addresses, so existing links and search results keep working.
+    location = /about-us/ { return 301 /about/; }
+    location = /contact-us/ { return 301 /contact/; }
+    location = /track-your-order/ { return 301 /track/; }
+    location = /job-openings/ { return 301 /careers/; }
+    location = /branch-locator/ { return 301 /branches/; }
+    location ~ ^/services/.+ { return 301 /services/; }
+    location ~ ^/(rate-calculator|pincode-locator|volumetric-weight-calculator|conversion-factors|world-clock|support)/?$ { return 301 /customer-tools/; }
+    location ~ ^/(gallery|news-events|blogs)(/.*)?$ { return 301 /; }
+
+    location / { try_files $uri $uri/ =404; }
+    error_page 404 /404.html;
+}
