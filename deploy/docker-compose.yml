@@ -1,0 +1,30 @@
+# OCCPL Logistics website, its own Compose project. Joins the platform network so Caddy can reach it; publishes no ports.
+name: occpl-website
+services:
+  web:
+    build:
+      context: ..
+      args:
+        SITE_URL: https://pro.occpllogistics.com
+    image: occpl-website:local
+    restart: unless-stopped
+    environment:
+      COURIER_API: https://courier.dev.occplsoftech.com
+      COURIER_API_HOST: courier.dev.occplsoftech.com
+    mem_limit: 64m
+    cpus: 0.5
+    logging:
+      driver: json-file
+      options: { max-size: 10m, max-file: "3" }
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      platform:
+        aliases: [occpl-website]
+networks:
+  platform:
+    external: true
+    name: occpl_default

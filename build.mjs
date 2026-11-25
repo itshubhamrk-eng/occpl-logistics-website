@@ -1,12 +1,30 @@
 // Builds the static site: src/layout.html + src/pages/*.html -> dist/ (clean URLs), copies assets, writes sitemap and robots.
-// No dependencies. Run: node build.mjs   (SITE_URL=https://www.occpllogistics.com by default)
+// No dependencies. Run: node build.mjs   (SITE_URL=https://pro.occpllogistics.com by default)
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, cpSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-const SITE_URL = (process.env.SITE_URL || 'https://www.occpllogistics.com').replace(/\/$/, '');
+const SITE_URL = (process.env.SITE_URL || 'https://pro.occpllogistics.com').replace(/\/$/, '');
 const OUT = 'dist';
 const NAV = [['/', 'Home'], ['/about/', 'About'], ['/services/', 'Services'], ['/customer-tools/', 'Customer Tools'],
   ['/branches/', 'Branches'], ['/careers/', 'Careers'], ['/contact/', 'Contact']];
+// Structured data (JSON-LD) built from what each page visibly says, so it cannot drift from the content.
+const text = (h) => h.replace(/<[^>]+>/g, ' ').replaceAll('&amp;', '&').replaceAll('&nbsp;', ' ').replace(/\s+/g, ' ').trim();
+const ld = (data) => `<script type="application/ld+json">${JSON.stringify({ '@context': 'https://schema.org', ...data }).replaceAll('<', '\\u003c')}</script>`;
+function structuredData(slug, path, meta, body) {
+  if (slug === '404') return '';
+  const org = { '@id': `${SITE_URL}/#org` };
+  if (slug === 'index') return ld({ '@type': 'WebSite', name: 'OCCPL Logistics', url: `${SITE_URL}/`, inLanguage: 'en-IN', publisher: org });
+  const name = text((body.match(/<h1[^>]*>([\s\S]*?)<\/h1>/) || [, meta.title])[1]);
+  const out = [ld({ '@type': 'BreadcrumbList', itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: `${SITE_URL}/` },
+    { '@type': 'ListItem', position: 2, name, item: SITE_URL + path }] })];
+  if (slug === 'faq') out.push(ld({ '@type': 'FAQPage', mainEntity: [...body.matchAll(/<summary>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/g)].map((x) => (
+    { '@type': 'Question', name: text(x[1]), acceptedAnswer: { '@type': 'Answer', text: text(x[2]) } })) }));
+  if (slug === 'services') out.push(...[...body.matchAll(/<article id="([^"]+)"[\s\S]*?<h2[^>]*>([\s\S]*?)<\/h2><p[^>]*>([\s\S]*?)<\/p>/g)].map((x) => ld(
+    { '@type': 'Service', name: text(x[2]), description: text(x[3]), url: `${SITE_URL}${path}#${x[1]}`, provider: org, areaServed: 'IN' })));
+  return out.join('\n');
+}
+
 const version = Date.now().toString(36);
 const layout = readFileSync('src/layout.html', 'utf8');
 
@@ -28,7 +46,8 @@ for (const file of readdirSync('src/pages').filter((f) => f.endsWith('.html')).s
   const html = layout
     .replaceAll('{{title}}', meta.title).replaceAll('{{description}}', meta.description)
     .replaceAll('{{path}}', path).replaceAll('{{siteUrl}}', SITE_URL).replaceAll('{{version}}', version)
-    .replaceAll('{{year}}', String(new Date().getFullYear())).replace('{{nav}}', nav).replace('{{body}}', body);
+    .replaceAll('{{year}}', String(new Date().getFullYear())).replace('{{robots}}', () => slug === '404' ? '<meta name="robots" content="noindex">' : `<link rel="canonical" href="${SITE_URL}${path}">\n<meta name="robots" content="index,follow,max-image-preview:large">`)
+    .replace('{{jsonld}}', () => structuredData(slug, path, meta, body)).replace('{{nav}}', nav).replace('{{body}}', () => body);
   const target = slug === 'index' ? join(OUT, 'index.html') : slug === '404' ? join(OUT, '404.html') : join(OUT, slug, 'index.html');
   mkdirSync(join(target, '..'), { recursive: true });
   writeFileSync(target, html);
