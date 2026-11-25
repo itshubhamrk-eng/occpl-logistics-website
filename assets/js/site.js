@@ -158,7 +158,7 @@
       (o && o.action ? '<p style="margin:12px 0 0"><span class="pill p-info" style="white-space:normal;overflow-wrap:anywhere">' + esc(o.action) + '</span></p>' : '') +
       '<h2 style="font-size:18px;margin-top:22px">Order details</h2>' + order + photo + '</div>' +
       '<div style="display:grid;gap:24px"><div class="panel"><h2 style="font-size:18px">Shipment details</h2>' + carrier + '</div>' +
-      '<div class="panel help"><h2 style="font-size:18px">Need help?</h2><a href="tel:+919370721219">Call customer care <span style="color:var(--primary-strong)">93707 21219</span></a><a href="mailto:info@occpllogistics.com">Email us <span>info@occpllogistics.com</span></a></div></div></div>';
+      '<div class="panel help"><h2 style="font-size:18px">Need help?</h2><a href="tel:+919370321219">Call customer care <span style="color:var(--primary-strong)">93703 21219</span></a><a href="mailto:info@occpllogistics.com">Email us <span>info@occpllogistics.com</span></a></div></div></div>';
   }
   function render(t) {
     var status = t.status, idx = -1;
@@ -182,7 +182,7 @@
         partner + '<h2 style="font-size:18px;margin:28px 0 16px">Shipment journey</h2><div class="tl">' + steps + '</div></div>' +
       '<div style="display:grid;gap:24px"><div class="panel"><h2 style="font-size:18px">See full details</h2><p style="color:var(--muted);margin:8px 0 14px">Enter the <b>last 4 digits of the receiver\'s mobile number</b> to see addresses, current location and the proof of delivery.</p>' +
         '<form id="verify" class="row" style="display:flex;gap:10px"><label class="sr" for="last4">Last 4 digits</label><input id="last4" class="input" inputmode="numeric" maxlength="4" pattern="\\d{4}" placeholder="e.g. 4321" required><button class="btn btn--red" type="submit">Verify</button></form><div id="detail" style="margin-top:14px"></div></div>' +
-        '<div class="panel help"><h2 style="font-size:18px">Need help?</h2><a href="#" id="complain">Raise a complaint about this shipment <span>→</span></a><a href="tel:+919370721219">Call customer care <span style="color:var(--primary-strong)">93707 21219</span></a><a href="mailto:info@occpllogistics.com">Email us <span>info@occpllogistics.com</span></a></div></div></div>';
+        '<div class="panel help"><h2 style="font-size:18px">Need help?</h2><a href="#" id="complain">Raise a complaint about this shipment <span>→</span></a><a href="tel:+919370321219">Call customer care <span style="color:var(--primary-strong)">93703 21219</span></a><a href="mailto:info@occpllogistics.com">Email us <span>info@occpllogistics.com</span></a></div></div></div>';
     $('#verify').addEventListener('submit', function (e) { e.preventDefault(); verify(); });
     $('#complain').addEventListener('click', function (e) { e.preventDefault(); var d = $('#detail'); if (!d.dataset.ok) { $('#last4').focus(); d.innerHTML = '<p class="note">Verify with the last 4 digits first, then you can raise a complaint.</p>'; } else complaintForm(); });
   }
@@ -215,11 +215,11 @@
       out.innerHTML = '<p class="hint">Sending…</p>';
       api('/track/' + encodeURIComponent(current) + '/tickets', { method: 'POST', body: JSON.stringify({ phoneLast4: last4, subject: box.subject.value.trim(), message: box.message.value.trim() }) }).then(function (r) {
         var k = r.body && (r.body.data || r.body);
-        out.innerHTML = r.ok ? '<p class="pill p-green">✓ Complaint registered' + (k && k.ticketNumber ? ': ' + esc(k.ticketNumber) : '') + '. Our customer care will contact you within 3 working days.</p>' : '<div class="err">' + esc((r.body && r.body.message) || 'Could not send. Please call 93707 21219.') + '</div>';
+        out.innerHTML = r.ok ? '<p class="pill p-green">✓ Complaint registered' + (k && k.ticketNumber ? ': ' + esc(k.ticketNumber) : '') + '. Our customer care will contact you within 3 working days.</p>' : '<div class="err">' + esc((r.body && r.body.message) || 'Could not send. Please call 93703 21219.') + '</div>';
         btn.disabled = r.ok;
       }).catch(function () {
         btn.disabled = false;
-        out.innerHTML = '<div class="err" role="alert">We could not confirm your complaint was received. To avoid sending it twice, press Verify again to see your complaints, or call 93707 21219.</div>';
+        out.innerHTML = '<div class="err" role="alert">We could not confirm your complaint was received. To avoid sending it twice, press Verify again to see your complaints, or call 93703 21219.</div>';
       });
     });
   }
