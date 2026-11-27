@@ -53,7 +53,7 @@ h1,h2,h3,h4{letter-spacing:-.02em;margin:0;line-height:1.15}
 textarea.input{height:auto;padding:12px 16px;resize:vertical}select.input{appearance:auto}
 /* sections */
 .stats{margin-top:-70px;position:relative;z-index:2}
-.stats .box{display:grid;grid-template-columns:repeat(5,1fr);background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-md);padding:30px 10px;border:1px solid var(--border)}
+.stats .box{display:grid;grid-template-columns:repeat(6,1fr);background:#fff;border-radius:var(--r-lg);box-shadow:var(--sh-md);padding:30px 10px;border:1px solid var(--border)}
 .stat{text-align:center;border-right:1px solid var(--border);padding:4px 16px}.stat:last-child{border:0}
 .stat b{display:block;font:700 42px Outfit,sans-serif;color:var(--primary-strong);letter-spacing:-.02em}.stat span{color:var(--muted);font-weight:500}
 .s{padding:92px 0}.s h2{font-size:44px;margin:10px 0 14px}.sub{color:var(--muted);font-size:18px;max-width:680px;line-height:1.6}
@@ -151,3 +151,10 @@ footer{padding-bottom:92px}
 .mt small{display:block;color:var(--muted);font-size:12px}.mt b,.mt span{overflow-wrap:anywhere}
 .mt .pill{justify-self:start}.mt-wide{grid-column:3/6}.mt-go{color:var(--primary-strong);font-weight:600;white-space:nowrap}
 @media (max-width:900px){.mt li,.mt-link{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.mt-awb,.mt .pill,.mt-route,.mt-wide{grid-column:1/-1}.mt-go,.mt-retry{grid-column:1/-1;justify-self:start}}
+.dev{border:1px solid #f1d6a8;background:var(--warning-bg);border-radius:16px;padding:18px 20px;margin-top:18px}.dev.card{padding:28px}.dev p{margin:10px 0 0;color:var(--ink)}.dev h3{margin:12px 0 0}
+.dev-btns{display:flex;flex-wrap:wrap;gap:10px}.dev-inline .pill{margin-right:6px}
+.vt{width:100%;margin-top:18px;border-collapse:collapse;background:var(--brand-50);border-radius:16px;overflow:hidden;font-size:15px}
+.vt caption{text-align:left;padding:0 0 8px;color:var(--muted);font-size:14px}.vt th,.vt td{padding:10px 12px;text-align:right;border-top:1px solid var(--border)}
+.vt thead th{border-top:0;color:var(--muted);font-weight:600;font-size:13px}.vt th[scope=row],.vt thead th:first-child{text-align:left}.vt b{color:var(--primary-strong)}
+@media (max-width:420px){.vt th,.vt td{padding:9px 6px;font-size:14px}}
+.dev .pill{background:#fff}

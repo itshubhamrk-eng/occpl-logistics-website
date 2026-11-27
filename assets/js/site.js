@@ -22,6 +22,9 @@
     menu.textContent = open ? '✕' : '☰';
   });
 
+  // ---- years in business, counted from the year the company started
+  $$('[data-since]').forEach(function (e) { var y = new Date().getFullYear() - +e.getAttribute('data-since'); if (y > 0) e.textContent = y + '+'; });
+
   // ---- WhatsApp: phones open the app from the wa.me link; computers go straight to WhatsApp Web
   var onPhone = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   $$('a[href^="https://wa.me/"]').forEach(function (a) {
@@ -86,7 +89,7 @@
     }).catch(function (e) {
       msg.textContent = e && e.name === 'NotAllowedError'
         ? 'Camera permission was refused. Allow the camera for this site, or type the number.'
-        : 'Could not start the scanner on this device. Type the number instead.';
+        : 'Scanning on this device is under development. Type the number instead.';
     });
   }
   $$('[data-scan]').forEach(function (b) { b.addEventListener('click', openScan); });
@@ -122,6 +125,15 @@
     return p;
   }
   function slow(e) { return !!e && e.name === 'AbortError'; }
+  // Anything that is not working right now is shown as under development, with a way to reach us.
+  var DEV_MSG = 'This feature is under development. Please call 93703 21219 or WhatsApp 97639 21219.';
+  function devNote(what) {
+    return '<div class="dev" role="status"><span class="pill p-amber">Under development</span><p>' + esc(what ? what + ' is under development.' : 'This feature is under development.') +
+      ' Please call or WhatsApp us.</p><p class="dev-btns"><a class="btn btn--red" href="tel:+919370321219">Call 93703 21219</a>' +
+      '<a class="btn btn--soft" href="https://wa.me/919763921219?text=Hello%20OCCPL%20Logistics%2C%20I%20need%20help%20with%20a%20shipment." rel="noopener">WhatsApp 97639 21219</a></p></div>';
+  }
+  // A message from the service about what was typed (4xx) is kept; anything else means the service is not working.
+  function userMsg(r) { return r && r.status >= 400 && r.status < 500 && r.status !== 404 && r.status !== 429 && r.body && r.body.message; }
   var app = $('#track-app'), current = null;
   function track(n) {
     if (!app) return;
@@ -131,13 +143,13 @@
       if (current !== n) return;
       if (r.status === 404) return trackOld(n);
       if (!r.ok) {
-        app.innerHTML = '<div class="err" role="alert">' + esc((r.body && r.body.message) || 'Tracking is not available right now. Please try again in a moment.') + '</div>';
+        app.innerHTML = r.status === 429 ? '<div class="err" role="alert">Too many searches. Please wait a minute and try again.</div>' : userMsg(r) ? '<div class="err" role="alert">' + esc(userMsg(r)) + '</div>' : devNote('Tracking');
         return;
       }
       render(r.body.data || r.body);
     }).catch(function (e) {
       if (current !== n) return;
-      app.innerHTML = '<div class="err" role="alert">' + (slow(e) ? 'Tracking is taking too long to respond.' : 'Could not reach the tracking service. Check your connection and try again.') + '</div><p><button class="btn btn--red" type="button" id="retry">Try again</button></p>';
+      app.innerHTML = devNote('Tracking') + '<p><button class="btn btn--line" type="button" id="retry">Try again</button></p>';
       $('#retry').addEventListener('click', function () { track(n); });
     });
   }
@@ -149,7 +161,7 @@
       if (current !== n) return;
       if (r.status === 404) { app.innerHTML = none; return; }
       if (!r.ok || !r.body || (!r.body.internal_status && !r.body.shipway_status)) {
-        app.innerHTML = '<div class="err" role="alert">' + (r.status === 429 ? 'Too many searches. Please wait a minute and try again.' : 'Tracking is not available right now. Please try again in a moment.') + '</div>';
+        app.innerHTML = r.status === 429 ? '<div class="err" role="alert">Too many searches. Please wait a minute and try again.</div>' : devNote('Tracking');
         return;
       }
       renderOld(r.body, n);
@@ -208,7 +220,7 @@
     if (!/^\d{4}$/.test(v)) { d.innerHTML = '<div class="err">Enter exactly 4 digits.</div>'; return; }
     d.innerHTML = '<p class="hint">Checking…</p>';
     api('/track/' + encodeURIComponent(current) + '/verify', { method: 'POST', body: JSON.stringify({ phoneLast4: v }) }).then(function (r) {
-      if (!r.ok) { d.innerHTML = '<div class="err" role="alert">' + esc((r.body && r.body.message) || 'Those digits do not match this shipment.') + '</div>'; return; }
+      if (!r.ok) { d.innerHTML = r.status < 500 ? '<div class="err" role="alert">' + esc((r.body && r.body.message) || 'Those digits do not match this shipment.') + '</div>' : devNote('Shipment details'); return; }
       last4 = v; d.dataset.ok = '1';
       var x = r.body.data || r.body, pod = x.pod;
       d.innerHTML = '<div class="kv"><div><small>Sender</small><span>' + esc(x.senderName) + '<br>' + esc(x.senderAddress) + '</span></div><div><small>Receiver</small><span>' + esc(x.receiverName) + '<br>' + esc(x.receiverAddress) + '</span></div>' +
@@ -217,7 +229,7 @@
           (pod.photoUrl ? '<a href="' + esc(pod.photoUrl) + '" target="_blank" rel="noopener"><img src="' + esc(pod.photoUrl) + '" alt="Delivery photo"></a>' : '') +
           (pod.signatureUrl ? '<a href="' + esc(pod.signatureUrl) + '" target="_blank" rel="noopener"><img src="' + esc(pod.signatureUrl) + '" alt="Receiver signature"></a>' : '') + '</div>' : '') +
         ((x.tickets || []).length ? '<h3 style="font-size:16px;margin-top:16px">Your complaints</h3>' + x.tickets.map(function (k) { return '<p class="hint"><b>' + esc(k.ticketNumber) + '</b> · ' + esc(k.subject) + ' · <span class="pill p-grey">' + esc(k.status) + '</span></p>'; }).join('') : '');
-    }).catch(function (e) { d.innerHTML = '<div class="err" role="alert">' + (slow(e) ? 'This is taking too long.' : 'Could not reach the tracking service.') + ' Please try Verify again.</div>'; });
+    }).catch(function () { d.innerHTML = devNote('Shipment details'); });
   }
   function complaintForm() {
     var d = $('#detail');
@@ -231,7 +243,7 @@
       out.innerHTML = '<p class="hint">Sending…</p>';
       api('/track/' + encodeURIComponent(current) + '/tickets', { method: 'POST', body: JSON.stringify({ phoneLast4: last4, subject: box.subject.value.trim(), message: box.message.value.trim() }) }).then(function (r) {
         var k = r.body && (r.body.data || r.body);
-        out.innerHTML = r.ok ? '<p class="pill p-green">✓ Complaint registered' + (k && k.ticketNumber ? ': ' + esc(k.ticketNumber) : '') + '. Our customer care will contact you within 3 working days.</p>' : '<div class="err">' + esc((r.body && r.body.message) || 'Could not send. Please call 93703 21219.') + '</div>';
+        out.innerHTML = r.ok ? '<p class="pill p-green">✓ Complaint registered' + (k && k.ticketNumber ? ': ' + esc(k.ticketNumber) : '') + '. Our customer care will contact you within 3 working days.</p>' : userMsg(r) ? '<div class="err">' + esc(userMsg(r)) + '</div>' : devNote('Online complaints');
         btn.disabled = r.ok;
       }).catch(function () {
         btn.disabled = false;
@@ -255,16 +267,16 @@
         return { found: true, status: LABEL[t.status] || t.status, badge: BADGE[t.status] || 'p-info', from: t.fromCity, to: t.toCity,
           booked: fmtDate(t.bookingDate), expected: t.status === 'DELIVERED' ? 'Delivered' : fmtDate(t.expectedDeliveryDate) };
       }
-      if (r.status !== 404) return { error: (r.body && r.body.message) || 'Tracking is not available right now.' };
+      if (r.status !== 404) return { error: userMsg(r) || (r.status === 429 ? 'Too many searches. Please wait a minute and try again.' : DEV_MSG) };
       if (!/^[A-Z0-9_-]{4,30}$/.test(n)) return { none: true };
       return request('/api/old-track/' + n, {}, OLD_TIMEOUT_MS).then(function (o) {
         if (o.status === 404) return { none: true };
         var d = o.body && o.body.internal_status, s = o.body && o.body.shipway_status;
-        if (!o.ok || (!d && !s)) return { error: o.status === 429 ? 'Too many searches. Please wait a minute and try again.' : 'Tracking is not available right now.' };
+        if (!o.ok || (!d && !s)) return { error: o.status === 429 ? 'Too many searches. Please wait a minute and try again.' : DEV_MSG };
         return { found: true, status: (d && d.action) || (s && s.current_status) || 'See details', badge: 'p-info', from: '', to: d && d.consignee_city,
           booked: fmtDate((d && d.booking_date) || (s && s.pickup_date)), expected: (s && s.extra_fields && s.extra_fields.expected_delivery_date) || '—' };
       });
-    }).catch(function (e) { return { error: slow(e) ? 'Tracking is taking too long to respond.' : 'Could not reach the tracking service.' }; });
+    }).catch(function () { return { error: DEV_MSG }; });
   }
   function trackMany(list) {
     var key = list.join(',');
@@ -284,7 +296,7 @@
       } else if (x.none) {
         li.innerHTML = head + '<span class="pill p-red">No shipment found</span><span class="hint mt-wide" style="margin:0">Check the number on your receipt.</span>';
       } else {
-        li.innerHTML = head + '<span class="pill p-amber">Not checked</span><span class="hint mt-wide" style="margin:0">' + esc(x.error) + '</span><button class="btn btn--soft mt-retry" type="button">Try again</button>';
+        li.innerHTML = head + '<span class="pill p-amber">Under development</span><span class="hint mt-wide" style="margin:0">' + esc(x.error) + '</span><button class="btn btn--soft mt-retry" type="button">Try again</button>';
         li.querySelector('button').addEventListener('click', function () { li.innerHTML = head + '<span class="pill p-grey">Checking…</span>'; left++; lookup(n).then(function (y) { if (current === key) row(i, y); }); });
       }
       left--;
@@ -324,18 +336,16 @@
       if (!pin.test(f.to.value)) return bad('to', 'Enter a 6-digit to pincode.');
       if (!(num('kg') > 0) || !f.kg.checkValidity()) return bad('kg', 'Enter the weight in kg, above 0, with up to 3 decimals.');
       if (num('value') === null || !f.value.checkValidity()) return bad('value', 'Enter the value of the goods in rupees.');
-      var more = ['pieces', 'l', 'w', 'h'].filter(function (n) { return !f[n].checkValidity(); })[0];
-      if (!more && ['l', 'w', 'h'].some(function (n) { return f[n].value; })) more = ['l', 'w', 'h'].filter(function (n) { return !f[n].value; })[0];
-      if (more) { rc.querySelector('details').open = true; return bad(more, 'Check the boxes and enter all three dimensions, or leave all three empty.'); }
+      if (!f.pieces.checkValidity()) { rc.querySelector('details').open = true; return bad('pieces', 'Enter the number of boxes, 1 to 999.'); }
       var my = ++rseq;
       rbtn.disabled = true; rbtn.textContent = 'Checking…';
       rout.innerHTML = '<div class="skel" style="margin-top:18px" aria-label="Loading"></div>';
       api('/public/rates', { method: 'POST', body: JSON.stringify({ originPincode: f.from.value, destinationPincode: f.to.value, actualWeightKg: num('kg'), declaredValue: num('value'),
-        pieces: num('pieces') || 1, lengthCm: num('l'), widthCm: num('w'), heightCm: num('h'), cod: f.cod.checked }) }).then(function (r) {
+        pieces: num('pieces') || 1, cod: f.cod.checked }) }).then(function (r) {
         if (my !== rseq) return;
         var d = r.body && (r.body.data || r.body);
         if (!r.ok || !d || !Array.isArray(d.rates)) {
-          rerr(r.status === 429 ? 'Too many rate checks. Please wait a minute and try again.' : r.status === 422 && r.body && r.body.message ? r.body.message : 'Rates are not available right now. Please try again, or call 93703 21219.');
+          if (r.status === 429) rerr('Too many rate checks. Please wait a minute and try again.'); else if (userMsg(r)) rerr(userMsg(r)); else rout.innerHTML = devNote('The online rate check');
           return;
         }
         rout.innerHTML = '<div class="rate-grid">' + d.rates.map(function (o, i) {
@@ -346,18 +356,23 @@
             '<details><summary>View breakup</summary><table>' + row('Freight', o.freight) + o.charges.map(function (c) { return row(c.name, c.amount); }).join('') +
             o.taxes.map(function (t) { return row(t.code + ' ' + t.percent + '%', t.amount); }).join('') + (+o.roundOff ? row('Round off', o.roundOff) : '') + '<tr class="sum"><td>Total</td><td>' + inr(o.total) + '</td></tr></table></details></article>';
         }).join('') + '</div><p class="hint">Estimated rates for today. The weight, size and service at booking decide the final charge and delivery date.</p>';
-      }).catch(function (e) { if (my === rseq) rerr(slow(e) ? 'This is taking too long. Please try again.' : 'Could not reach the rate service. Check your connection and try again.'); })
+      }).catch(function () { if (my === rseq) rout.innerHTML = devNote('The online rate check'); })
         .then(function () { if (my === rseq) { rbtn.disabled = false; rbtn.textContent = 'Check rates'; } });
     });
   }
 
-  // ---- volumetric weight calculator (cm, divisor 5000 for courier / 4000 for cargo)
+  // ---- volumetric weight calculator: L x W x H (cm) / divisor, for every service type
+  var VOL_SERVICES = [['Surface', 4500], ['Air', 5000], ['Premium', 5000], ['Cargo', 4000]];
   var vol = $('#vol-calc');
   if (vol) {
     var calc = function () {
-      var l = +vol.l.value || 0, w = +vol.w.value || 0, h = +vol.h.value || 0, n = Math.max(1, +vol.n.value || 1), a = +vol.a.value || 0, div = +vol.div.value || 5000;
-      var v = l * w * h / div * n, c = Math.max(v, a);
-      $('#vol-out').innerHTML = '<div><b>' + v.toFixed(2) + ' kg</b><span>Volumetric weight</span></div><div><b>' + a.toFixed(2) + ' kg</b><span>Actual weight</span></div><div><b>' + c.toFixed(2) + ' kg</b><span>Chargeable weight</span></div>';
+      var l = +vol.l.value || 0, w = +vol.w.value || 0, h = +vol.h.value || 0, n = Math.max(1, +vol.n.value || 1), a = +vol.a.value || 0;
+      var kg = function (x) { return x.toFixed(2) + ' kg'; };
+      $('#vol-out').innerHTML = '<table class="vt"><caption>Actual weight: ' + kg(a) + '</caption><thead><tr><th scope="col">Service</th><th scope="col">Divisor</th><th scope="col">Volumetric</th><th scope="col">Chargeable</th></tr></thead><tbody>' +
+        VOL_SERVICES.map(function (s) {
+          var v = l * w * h / s[1] * n;
+          return '<tr><th scope="row">' + s[0] + '</th><td>÷ ' + s[1] + '</td><td>' + kg(v) + '</td><td><b>' + kg(Math.max(v, a)) + '</b></td></tr>';
+        }).join('') + '</tbody></table>';
     };
     vol.addEventListener('input', calc); calc();
   }
@@ -367,12 +382,4 @@
     conv.addEventListener('input', cv); cv();
   }
 
-  // ---- enquiry forms: open the customer's email app with the details filled in (no data stored on this website)
-  $$('form[data-mail]').forEach(function (f) {
-    f.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var lines = $$('input,select,textarea', f).filter(function (i) { return i.name && i.type !== 'checkbox'; }).map(function (i) { return i.getAttribute('data-label') + ': ' + i.value; });
-      location.href = 'mailto:info@occpllogistics.com?subject=' + encodeURIComponent(f.getAttribute('data-mail')) + '&body=' + encodeURIComponent(lines.join('\n'));
-    });
-  });
 })();
