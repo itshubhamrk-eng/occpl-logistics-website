@@ -362,19 +362,27 @@
   }
 
   // ---- volumetric weight calculator: L x W x H (cm) / divisor, for every service type
-  var VOL_SERVICES = [['Surface', 4500], ['Air', 5000], ['Premium', 5000], ['Cargo', 4000]];
-  var vol = $('#vol-calc');
+  // Each service's divisor comes from the courier platform's service types (the same divisor its rates use).
+  var vol = $('#vol-calc'), volServices = null;
   if (vol) {
+    var title = function (s) { return s === s.toUpperCase() ? s.charAt(0) + s.slice(1).toLowerCase() : s; };
     var calc = function () {
+      if (!volServices) return;
+      if (!volServices.length) { $('#vol-out').innerHTML = devNote('Volumetric weight by service'); return; }
       var l = +vol.l.value || 0, w = +vol.w.value || 0, h = +vol.h.value || 0, n = Math.max(1, +vol.n.value || 1), a = +vol.a.value || 0;
       var kg = function (x) { return x.toFixed(2) + ' kg'; };
       $('#vol-out').innerHTML = '<table class="vt"><caption>Actual weight: ' + kg(a) + '</caption><thead><tr><th scope="col">Service</th><th scope="col">Divisor</th><th scope="col">Volumetric</th><th scope="col">Chargeable</th></tr></thead><tbody>' +
-        VOL_SERVICES.map(function (s) {
-          var v = l * w * h / s[1] * n;
-          return '<tr><th scope="row">' + s[0] + '</th><td>÷ ' + s[1] + '</td><td>' + kg(v) + '</td><td><b>' + kg(Math.max(v, a)) + '</b></td></tr>';
+        volServices.map(function (s) {
+          var v = l * w * h / s.divisor * n;
+          return '<tr><th scope="row">' + esc(title(s.service)) + '</th><td>÷ ' + esc(s.divisor) + '</td><td>' + kg(v) + '</td><td><b>' + kg(Math.max(v, a)) + '</b></td></tr>';
         }).join('') + '</tbody></table>';
     };
-    vol.addEventListener('input', calc); calc();
+    vol.addEventListener('input', calc);
+    $('#vol-out').innerHTML = '<div class="skel" style="margin-top:18px" aria-label="Loading"></div>';
+    api('/public/rates').then(function (r) {
+      var d = r.ok && r.body && (r.body.data || r.body);
+      volServices = d && Array.isArray(d.divisors) ? d.divisors.filter(function (s) { return s && s.service && s.divisor > 0; }) : [];
+    }, function () { volServices = []; }).then(calc);
   }
   var conv = $('#conv');
   if (conv) {
