@@ -7,6 +7,12 @@
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function clean(v) { return String(v || '').trim().toUpperCase().replace(/\s+/g, ''); }
+  // Several numbers may be typed at once, separated by commas (or semicolons / new lines).
+  var MAX_TRACK = 25;
+  function numbers(v) {
+    var seen = {};
+    return String(v || '').split(/[,;\n]+/).map(clean).filter(function (n) { return n && !seen[n] && (seen[n] = true); });
+  }
 
   // ---- menu
   var hd = $('#hd'), menu = $('.menu');
@@ -25,11 +31,13 @@
 
   // ---- any "track" form: go to the Track page with the number
   $$('form[data-track-form]').forEach(function (f) {
+    f.querySelector('input').addEventListener('input', function () { this.setCustomValidity(''); });
     f.addEventListener('submit', function (e) {
       e.preventDefault();
-      var n = clean(f.querySelector('input').value);
-      if (!n) { f.querySelector('input').focus(); return; }
-      if ($('#track-app') && f.hasAttribute('data-inline')) { history.replaceState(null, '', '?awb=' + encodeURIComponent(n)); track(n); }
+      var input = f.querySelector('input'), list = numbers(input.value), n = list.join(',');
+      if (!n) { input.focus(); return; }
+      if (list.length > MAX_TRACK) { input.setCustomValidity('Track up to ' + MAX_TRACK + ' numbers at a time. You entered ' + list.length + '.'); input.reportValidity(); return; }
+      if ($('#track-app') && f.hasAttribute('data-inline')) { history.replaceState(null, '', '?awb=' + encodeURIComponent(n)); show(list); }
       else location.href = '/track/?awb=' + encodeURIComponent(n);
     });
   });
@@ -161,13 +169,14 @@
       carrier = rows(list) + (/^https?:\/\//i.test(s.tracking_url || '') ? '<p style="margin:14px 0 0"><a class="btn btn--soft" href="' + esc(s.tracking_url) + '" target="_blank" rel="noopener noreferrer">Track with the carrier</a></p>' : '');
       if (Array.isArray(s.scan) && s.scan.length) carrier += '<h3 style="font-size:16px;margin-top:20px">Scan events</h3>' + rows(s.scan.map(function (e) { return [esc(fmtTime(e.time) || e.time), (e.status_detail || '') + (e.location ? ' at ' + e.location : '')]; }));
     }
-    app.innerHTML = '<div class="tgrid old"><div class="panel"><div class="awb"><small>AWB number</small><div>' + esc((o && o.awb_no) || n) + '</div></div>' +
+    app.innerHTML = backLink() + '<div class="tgrid old"><div class="panel"><div class="awb"><small>AWB number</small><div>' + esc((o && o.awb_no) || n) + '</div></div>' +
       (o && o.action ? '<p style="margin:12px 0 0"><span class="pill p-info" style="white-space:normal;overflow-wrap:anywhere">' + esc(o.action) + '</span></p>' : '') +
       '<h2 style="font-size:18px;margin-top:22px">Order details</h2>' + order + photo + '</div>' +
       '<div style="display:grid;gap:24px"><div class="panel"><h2 style="font-size:18px">Shipment details</h2>' + carrier + '</div>' +
       '<div class="panel help"><h2 style="font-size:18px">Need help?</h2><a href="tel:+919370321219">Call customer care <span style="color:var(--primary-strong)">93703 21219</span></a><a href="mailto:info@occpllogistics.com">Email us <span>info@occpllogistics.com</span></a></div></div></div>';
   }
   function render(t) {
+    var back = backLink();
     var status = t.status, idx = -1;
     STEPS.forEach(function (s, i) { if (s[0] === status) idx = i; });
     var when = {}; (t.timeline || []).forEach(function (e) { when[e.status] = e.changedAt; });
@@ -180,7 +189,7 @@
     }).join('');
     if (bad) steps += '<div><span class="dot bad">!</span><span><b>' + LABEL[status] + '</b><br><span>' + (status === 'RETURNED' ? 'The shipment went back to the sender' : 'This booking was cancelled') + '</span></span><time>' + esc(fmtTime(when[status])) + '</time></div>';
     var partner = t.carrier ? '<p class="note" style="margin-top:16px">Delivered by our partner <b>' + esc(t.carrier) + '</b>' + (t.latestStatus ? ': ' + esc(t.latestStatus) + (t.latestLocation ? ' · ' + esc(t.latestLocation) : '') : '') + '</p>' : '';
-    app.innerHTML =
+    app.innerHTML = back +
       '<div class="tgrid"><div class="panel">' +
         '<div class="st-top"><div class="awb"><small>AWB number</small><div>' + esc(t.trackingNumber || t.shipmentNumber) + '</div>' + (t.shipmentNumber && t.shipmentNumber !== t.trackingNumber ? '<small>Shipment ' + esc(t.shipmentNumber) + '</small>' : '') + '</div>' +
         '<span class="pill ' + (BADGE[status] || 'p-info') + '">● ' + esc(LABEL[status] || status) + '</span></div>' +
@@ -230,9 +239,72 @@
       });
     });
   }
+  // ---- several numbers: one summary row each; a row opens the full single-shipment view
+  var listFrom = '';
+  function backLink() {
+    return listFrom ? '<p style="margin:0 0 16px"><a class="btn btn--soft" href="/track/?awb=' + encodeURIComponent(listFrom) + '">← All ' + listFrom.split(',').length + ' shipments</a></p>' : '';
+  }
+  function show(list) {
+    if (list.length === 1) { listFrom = ''; track(list[0]); } else trackMany(list);
+  }
+  // One number's summary: the courier platform first, then the old system, like single tracking.
+  function lookup(n) {
+    return api('/track/' + encodeURIComponent(n)).then(function (r) {
+      if (r.ok) {
+        var t = r.body.data || r.body;
+        return { found: true, status: LABEL[t.status] || t.status, badge: BADGE[t.status] || 'p-info', from: t.fromCity, to: t.toCity,
+          booked: fmtDate(t.bookingDate), expected: t.status === 'DELIVERED' ? 'Delivered' : fmtDate(t.expectedDeliveryDate) };
+      }
+      if (r.status !== 404) return { error: (r.body && r.body.message) || 'Tracking is not available right now.' };
+      if (!/^[A-Z0-9_-]{4,30}$/.test(n)) return { none: true };
+      return request('/api/old-track/' + n, {}, OLD_TIMEOUT_MS).then(function (o) {
+        if (o.status === 404) return { none: true };
+        var d = o.body && o.body.internal_status, s = o.body && o.body.shipway_status;
+        if (!o.ok || (!d && !s)) return { error: o.status === 429 ? 'Too many searches. Please wait a minute and try again.' : 'Tracking is not available right now.' };
+        return { found: true, status: (d && d.action) || (s && s.current_status) || 'See details', badge: 'p-info', from: '', to: d && d.consignee_city,
+          booked: fmtDate((d && d.booking_date) || (s && s.pickup_date)), expected: (s && s.extra_fields && s.extra_fields.expected_delivery_date) || '—' };
+      });
+    }).catch(function (e) { return { error: slow(e) ? 'Tracking is taking too long to respond.' : 'Could not reach the tracking service.' }; });
+  }
+  function trackMany(list) {
+    var key = list.join(',');
+    current = key; listFrom = '';
+    app.innerHTML = '<div class="panel"><div class="mt-head"><h2 style="font-size:18px">Tracking ' + list.length + ' shipments</h2><span class="hint" id="mt-count" style="margin:0">Checking…</span></div>' +
+      '<ul class="mt">' + list.map(function (n, i) { return '<li id="mt-' + i + '"><div class="mt-awb"><small>AWB number</small><b>' + esc(n) + '</b></div><span class="pill p-grey">Checking…</span></li>'; }).join('') + '</ul></div>';
+    var next = 0, left = list.length, found = 0;
+    function row(i, x) {
+      var n = list[i], li = $('#mt-' + i), head = '<div class="mt-awb"><small>AWB number</small><b>' + esc(n) + '</b></div>';
+      if (x.found) {
+        found++;
+        li.innerHTML = '<a class="mt-link" href="/track/?awb=' + encodeURIComponent(n) + '&list=' + encodeURIComponent(key) + '">' + head +
+          '<span class="pill ' + x.badge + '" style="white-space:normal;overflow-wrap:anywhere">● ' + esc(x.status) + '</span>' +
+          '<div class="mt-route">' + (x.from ? '<small>From → To</small><span>' + esc(x.from) + ' → ' + esc(x.to || '—') + '</span>' : '<small>To</small><span>' + esc(x.to || '—') + '</span>') + '</div>' +
+          '<div><small>Booked on</small><span>' + esc(x.booked) + '</span></div><div><small>Expected delivery</small><span>' + esc(x.expected) + '</span></div>' +
+          '<span class="mt-go">Details →</span></a>';
+      } else if (x.none) {
+        li.innerHTML = head + '<span class="pill p-red">No shipment found</span><span class="hint mt-wide" style="margin:0">Check the number on your receipt.</span>';
+      } else {
+        li.innerHTML = head + '<span class="pill p-amber">Not checked</span><span class="hint mt-wide" style="margin:0">' + esc(x.error) + '</span><button class="btn btn--soft mt-retry" type="button">Try again</button>';
+        li.querySelector('button').addEventListener('click', function () { li.innerHTML = head + '<span class="pill p-grey">Checking…</span>'; left++; lookup(n).then(function (y) { if (current === key) row(i, y); }); });
+      }
+      left--;
+      $('#mt-count').textContent = left > 0 ? 'Checking… ' + (list.length - left) + ' of ' + list.length : found + ' of ' + list.length + ' found';
+    }
+    // a few at a time, so a long list doesn't flood the tracking service
+    function worker() {
+      if (current !== key || next >= list.length) return;
+      var i = next++;
+      return lookup(list[i]).then(function (x) { if (current === key) { row(i, x); return worker(); } });
+    }
+    for (var w = 0; w < 4; w++) worker();
+  }
   if (app) {
-    var q = new URLSearchParams(location.search).get('awb');
-    if (q) { q = clean(q); $$('form[data-track-form] input').forEach(function (i) { i.value = q; }); track(q); }
+    var qs = new URLSearchParams(location.search), q = numbers(qs.get('awb')).slice(0, MAX_TRACK), from = numbers(qs.get('list'));
+    if (q.length) {
+      $$('form[data-track-form] input').forEach(function (i) { i.value = q.join(', '); });
+      if (q.length === 1 && from.length > 1 && from.indexOf(q[0]) >= 0) { listFrom = from.slice(0, MAX_TRACK).join(','); track(q[0]); }
+      else show(q);
+    }
   }
 
   // ---- rate calculator: the courier platform's zone tariff (public rates API)

@@ -50,7 +50,7 @@ server {
     # Shipments of the old system (GET, one AWB). Its address is resolved per request, so the site starts without it.
     location ^~ /api/old-track/ {
         limit_except GET { deny all; }
-        limit_req zone=oldtrack burst=10 nodelay;
+        limit_req zone=oldtrack burst=25 nodelay;
         limit_req_status 429;
         resolver 127.0.0.11 valid=60s ipv6=off;
         set $old_host occplserver.azurewebsites.net;
