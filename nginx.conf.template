@@ -33,9 +33,9 @@ server {
         client_max_body_size 16k;
     }
 
-    # Public rate calculator (POST only).
+    # Public rate calculator: POST prices a shipment, GET lists each service's volumetric divisor.
     location = /api/v1/public/rates {
-        limit_except POST { deny all; }
+        limit_except GET POST { deny all; }
         limit_req zone=rates burst=10 nodelay;
         limit_req_status 429;
         proxy_pass ${COURIER_API}/api/v1/public/rates;
