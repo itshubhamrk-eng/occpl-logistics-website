@@ -371,10 +371,10 @@
       if (!volServices.length) { $('#vol-out').innerHTML = devNote('Volumetric weight by service'); return; }
       var l = +vol.l.value || 0, w = +vol.w.value || 0, h = +vol.h.value || 0, n = Math.max(1, +vol.n.value || 1), a = +vol.a.value || 0;
       var kg = function (x) { return x.toFixed(2) + ' kg'; };
-      $('#vol-out').innerHTML = '<table class="vt"><caption>Actual weight: ' + kg(a) + '</caption><thead><tr><th scope="col">Service</th><th scope="col">Divisor</th><th scope="col">Volumetric</th><th scope="col">Chargeable</th></tr></thead><tbody>' +
+      $('#vol-out').innerHTML = '<table class="vt"><caption>Actual weight: ' + kg(a) + '</caption><thead><tr><th scope="col">Service</th><th scope="col">Volumetric</th><th scope="col">Chargeable</th></tr></thead><tbody>' +
         volServices.map(function (s) {
           var v = l * w * h / s.divisor * n;
-          return '<tr><th scope="row">' + esc(title(s.service)) + '</th><td>÷ ' + esc(s.divisor) + '</td><td>' + kg(v) + '</td><td><b>' + kg(Math.max(v, a)) + '</b></td></tr>';
+          return '<tr><th scope="row">' + esc(title(s.service)) + '</th><td>' + kg(v) + '</td><td><b>' + kg(Math.max(v, a)) + '</b></td></tr>';
         }).join('') + '</tbody></table>';
     };
     vol.addEventListener('input', calc);
