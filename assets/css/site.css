@@ -158,3 +158,4 @@ footer{padding-bottom:92px}
 .vt thead th{border-top:0;color:var(--muted);font-weight:600;font-size:13px}.vt th[scope=row],.vt thead th:first-child{text-align:left}.vt b{color:var(--primary-strong)}
 @media (max-width:420px){.vt th,.vt td{padding:9px 6px;font-size:14px}}
 .dev .pill{background:#fff}
+.vt-cft{display:block;color:var(--muted);font-size:13px;font-weight:500}
