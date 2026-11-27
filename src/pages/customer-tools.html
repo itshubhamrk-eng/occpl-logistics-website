@@ -12,7 +12,7 @@
 <label class="check"><input name="cod" type="checkbox"> Cash on delivery</label></div><p class="hint dev-inline"><span class="pill p-amber">Under development</span> Rates by box size are under development. Rates here use the total weight; work out the size-based weight with the <a href="#volumetric">volumetric weight calculator</a>.</p></details></form>
 <div id="rate-out" aria-live="polite"></div></div></div></section>
 <section class="s" style="padding-top:24px"><div class="wrap g2" style="align-items:start">
-<div id="volumetric" class="card calc"><h2 style="font-size:24px">Volumetric weight calculator</h2><p style="color:var(--muted)">Each service is charged on the higher of actual weight and volumetric weight (L × W × H in cm ÷ the service's divisor).</p>
+<div id="volumetric" class="card calc"><h2 style="font-size:24px">Volumetric weight calculator</h2><p style="color:var(--muted)">Each service is charged on the higher of actual weight and volumetric weight (based on the box size).</p>
 <form id="vol-calc" class="form" onsubmit="return false"><div class="two"><label>Length (cm)<input class="input" name="l" type="number" min="0" value="30"></label><label>Width (cm)<input class="input" name="w" type="number" min="0" value="20"></label></div>
 <div class="two"><label>Height (cm)<input class="input" name="h" type="number" min="0" value="15"></label><label>Number of boxes<input class="input" name="n" type="number" min="1" value="1"></label></div>
 <div class="two"><label>Actual weight (kg)<input class="input" name="a" type="number" min="0" step="0.1" value="2"></label></div></form>
